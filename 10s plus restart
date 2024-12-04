@@ -1,0 +1,130 @@
+#include <stc8g.h>  // 包含STC8系列头文件
+
+// 定义P3.3为输出引脚
+sbit LED = P3^3;
+
+// 时间变量
+volatile unsigned long second_counter = 0; // 秒计数器
+volatile unsigned char second, minute, hour;
+volatile unsigned int day_seconds;         // 每天总秒数
+
+// 设置每日重启时间 (24小时制)
+#define RESTART_HOUR 0  // 小时
+#define RESTART_MINUTE 1 // 分钟
+
+// 设置LED切换周期 (以秒为单位)
+#define LED_SWITCH_PERIOD 10  // 每300秒切换一次LED状态
+
+// 定义定时器溢出次数，24MHz时钟下，定时器初始值和溢出次数计算
+#define TIMER_OVERFLOW_10MS 30000  // 10ms中断，30000次中断等于5分钟
+
+// 延迟8秒的计数器
+#define DELAY_TIME_MS 8000  // 8秒等于8000毫秒
+#define DELAY_COUNT (DELAY_TIME_MS / 10)  // 每个中断周期是10毫秒
+
+volatile unsigned long overflow_count = 0;  // 溢出计数
+volatile unsigned long led_switch_timer = 0; // LED切换计时器
+volatile unsigned short delay_counter = 0;   // 延迟计数器
+volatile bit restart_pending = 0;            // 重启标志
+
+// 系统复位函数
+void System_Reset() {
+    // 使用看门狗复位
+    WDT_CONTR |= 0x80;  // 开启看门狗定时器并立即复位
+}
+
+// 定时器初始化函数
+void Timer0_Init() {
+    TMOD &= 0xF0;  // 清除定时器0模式位
+    TMOD |= 0x01;  // 设置定时器0为模式1（16位定时器/计数器）
+    TH0 = 0xB1;    // 设置定时器0初值，定时约10ms
+    TL0 = 0xE0;
+    ET0 = 1;       // 开启定时器0中断
+    EA = 1;        // 开启全局中断
+    TR0 = 1;       // 启动定时器0
+}
+
+// 定时器0中断服务程序
+void Timer0_ISR() interrupt 1 {
+    TH0 = 0xB1;    // 重新加载定时器0初值
+    TL0 = 0xE0;
+    overflow_count++;  // 溢出计数加1
+    
+    // 检查是否达到5分钟
+    if (overflow_count >= TIMER_OVERFLOW_10MS) {  
+        overflow_count -= TIMER_OVERFLOW_10MS;  // 减去5分钟对应的溢出次数
+        LED = !LED;  // 切换LED状态
+    }
+
+    // 每次中断都更新秒计数器
+    second_counter++;
+    
+    // 每100次中断（10ms * 100 = 1000ms = 1秒）
+    if (second_counter >= 100) {
+        second_counter -= 100;
+        
+        // 更新时间变量
+        second++;
+        if (second >= 60) {
+            second = 0;
+            minute++;
+            if (minute >= 60) {
+                minute = 0;
+                hour++;
+                if (hour >= 24) {
+                    hour = 0;
+                }
+            }
+        }
+
+        // 计算自午夜以来的秒数
+        day_seconds = hour * 3600 + minute * 60 + second;
+
+        // 检查是否达到每日重启时间
+        if (hour == RESTART_HOUR && minute == RESTART_MINUTE && second == 0) {
+            // 设置重启标志并启动延迟计数器
+            restart_pending = 1;
+            delay_counter = 0;
+        }
+
+        // 增加LED切换计时器
+        led_switch_timer++;
+        if (led_switch_timer >= LED_SWITCH_PERIOD) {
+            led_switch_timer = 0;
+            LED = !LED;  // 切换LED状态
+        }
+    }
+
+    // 如果重启标志已设置，开始延迟计数
+    if (restart_pending) {
+        delay_counter++;
+        if (delay_counter >= DELAY_TIME_MS) {
+            delay_counter = 0;
+            restart_pending = 0;
+            System_Reset();  // 触发系统复位
+        }
+    }
+}
+
+void Port_Init() {
+    P3M1 = 0x00;  // 设置P3口为推挽输出
+    P3M0 = 0xFF;  // 设置P3口为强推挽输出
+    LED = 0;      // 初始化LED为低电平
+}
+
+void main() {
+    Port_Init();  // 初始化端口
+    Timer0_Init();  // 初始化定时器
+
+    // 初始化时间
+    second = 0;
+    minute = 0;
+    hour = 0;
+    day_seconds = 0;
+    led_switch_timer = 0;
+    restart_pending = 0;
+
+    while(1) {
+        // 主循环中不需要做任何事情，所有工作由定时器中断完成
+    }
+}
