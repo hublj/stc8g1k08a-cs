@@ -6,7 +6,7 @@ sbit LED = P3^3;
 // 时间变量，用于记录定时器中断次数，设置为volatile确保在中断和主程序中能正确读写
 volatile unsigned long interrupt_count = 0; 
 
-// 可自行更改的闪烁时间间隔（单位：秒），初始化为3秒，可按需修改此值改变LED闪烁频率
+// 可自行更改的闪烁时间间隔（单位：秒），初始化为300秒，可按需修改此值改变LED闪烁频率
 #define BLINK_TIME_SECONDS 300  
 // 根据1毫秒的定时基准，将秒换算为对应的毫秒数（用于计算中断次数）
 #define MILLISECONDS_PER_SECOND 1000  
