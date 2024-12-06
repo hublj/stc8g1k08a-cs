@@ -1,0 +1,64 @@
+#include <stc8g.h>
+
+// 定义P3.3为输出引脚，用于连接LED
+sbit LED = P3^3;
+
+// 时间变量，用于记录定时器中断次数，设置为volatile确保在中断和主程序中能正确读写
+volatile unsigned long interrupt_count = 0; 
+
+// 可自行更改的闪烁时间间隔（单位：秒），初始化为300秒，修改此值可改变LED闪烁频率
+#define BLINK_TIME_SECONDS 300  
+// 根据10毫秒的定时基准，将秒换算为对应的毫秒数（用于计算中断次数）
+#define MILLISECONDS_PER_SECOND 1000  
+// 根据设定的秒数时间间隔换算出对应的定时器中断次数
+#define INTERRUPT_COUNT_BLINK_TIME (BLINK_TIME_SECONDS * MILLISECONDS_PER_SECOND / 10)
+
+// 定时器初始化函数，配置定时器0使其能以10毫秒为基准定时，基于24.000MHz系统时钟频率
+void Timer0_Init(void)        //10毫秒@24.000MHz
+{
+    AUXR &= 0x7F;            // 定时器时钟12T模式，使定时器计数频率为系统时钟频率的1/12
+    TMOD &= 0xF0;            // 先清除TMOD低4位，清除定时器0旧的模式设置
+    TMOD |= 0x01;            // 设置定时器0为模式1（16位定时器/计数器）
+    TL0 = 0xE0;              // 设置定时初始值，对应定时10毫秒初值
+    TH0 = 0xB1;              // 设置定时初始值
+    TF0 = 0;                 // 清除TF0标志，避免初始化后立即误触发中断
+    TR0 = 1;                 // 启动定时器0开始计时
+    ET0 = 1;                 // 使能定时器0中断，允许定时器0溢出时触发中断
+    EA = 1;                  // 开启全局中断，作为总开关使能所有已使能的中断源
+}
+
+// 定时器0中断服务函数，在此处理定时器中断相关逻辑，实现LED闪烁控制
+void Timer0_Isr(void) interrupt 1
+{
+    TL0 = 0xE0;              // 重新加载定时初始值，确保下一轮定时周期仍为10毫秒
+    TH0 = 0xB1;
+
+    interrupt_count++;       // 每次中断发生，中断次数加1
+
+    // 判断是否达到设定的闪烁时间间隔对应的中断次数
+    if (interrupt_count >= INTERRUPT_COUNT_BLINK_TIME)
+    {
+        interrupt_count = 0;  // 达到后计数清零，重新开始计数
+        LED =!LED;           // 切换LED状态，实现闪烁效果
+    }
+}
+
+// 端口初始化函数，配置P3口为强推挽输出模式，用于控制LED
+void Port_Init()
+{
+    P3M1 = 0x00;  // 设置P3口为推挽输出
+    P3M0 = 0xFF;  // 设置P3口为强推挽输出，增强驱动能力以驱动LED
+    LED = 0;      // 初始化LED为低电平，熄灭状态，闪烁从灭开始
+}
+
+// 主函数，程序入口，在此调用初始化函数并进入主循环等待中断触发
+void main()
+{
+    Port_Init();  // 初始化端口
+    Timer0_Init();  // 初始化定时器
+
+    while(1)
+    {
+        // 主循环保持空循环，所有定时相关操作在定时器中断服务函数中完成
+    }
+}
