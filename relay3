@@ -40,8 +40,8 @@ void timer0_init(void)
 // 定时器0中断服务函数，根据时间判断切换输出引脚的状态，同时进行时间换算
 void timer0_isr() interrupt 1
 {
-    TL0 = 0x66;
-    TH0 = 0xFC;
+	TL0 = 0x40;				//设置定时初始值
+	TH0 = 0xA2;				//设置定时初始值
 
     current_time++;
 
