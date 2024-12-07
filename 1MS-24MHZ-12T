@@ -1,0 +1,53 @@
+#include <stc8g.h>
+
+// 定义P3.3为输出引脚
+sbit LED = P3^3;
+
+// 定义定时器溢出次数，24MHz时钟下，定时器初始值和溢出次数计算
+#define TIMER_OVERFLOW_TIMES  300000  // 1ms溢出一次，5分钟
+
+volatile unsigned long overflow_count = 0;  // 溢出计数，使用unsigned long以避免溢出
+
+
+// 定时器初始化函数，配置定时器0使其能以1毫秒为基准定时，基于24MHz系统时钟频率
+
+
+void Timer0_Init(void)		//1毫秒@24.000MHz
+{
+	AUXR &= 0x7F;			//定时器时钟12T模式
+	TMOD &= 0xF0;			//设置定时器模式
+	TL0 = 0x30;				//设置定时初始值
+	TH0 = 0xF8;				//设置定时初始值
+	TF0 = 0;				//清除TF0标志
+	TR0 = 1;				//定时器0开始计时
+	ET0 = 1;				//使能定时器0中断
+}
+
+
+
+
+// 定时器0中断服务程序
+void Timer0_ISR() interrupt 1 {
+    TH0 = 0xF8;    // 重新加载定时器0初值
+    TL0 = 0x30;
+    overflow_count++;  // 溢出计数加1
+    if (overflow_count >= TIMER_OVERFLOW_TIMES) {  // 5分钟
+        overflow_count = 0;  // 重置溢出计数
+        LED = !LED;  // 切换LED状态
+    }
+}
+
+void Port_Init() {
+    P3M1 = 0x00;  // 设置P3口为推挽输出
+    P3M0 = 0xFF;  // 设置P3口为强推挽输出
+    LED = 0;      // 初始化LED为低电平
+}
+
+void main() {
+    Port_Init();  // 初始化端口
+    Timer0_Init();  // 初始化定时器
+
+    while(1) {
+        // 主循环中不需要做任何事情，所有工作由定时器中断完成
+    }
+}
