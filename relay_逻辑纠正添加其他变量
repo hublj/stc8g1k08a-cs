@@ -1,0 +1,12 @@
+    if (output_status == 0 && minutes >= on_minutes) {
+        // 当前为开状态且达到开的时长，切换为关状态
+        OUTPUT_PIN = 1;
+        output_status = 1;
+        minutes = 0;
+        seconds = 0;
+    } else if (output_status == 1 && minutes >= off_minutes) {
+        // 当前为关状态且达到关的时长，切换为开状态
+        OUTPUT_PIN = 0;
+        output_status = 0;
+        minutes = 0;
+        seconds = 0;
