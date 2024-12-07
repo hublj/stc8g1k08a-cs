@@ -1,0 +1,84 @@
+#include <stc8g.h>
+
+// 定义输出引脚，这里为P3.3
+sbit OUTPUT_PIN = P3^3;
+
+// 全局变量，用于记录当前状态持续时间（单位：毫秒）
+unsigned long current_time = 0;
+// 设置开的时长（单位：毫秒），初始化为对应3分钟的时长，下面通过换算函数来处理
+unsigned long on_duration = 180000;
+// 设置关的时长（单位：毫秒），初始化为对应2分钟的时长，下面通过换算函数来处理
+unsigned long off_duration = 120000;
+// 标记当前状态，1表示开，0表示关
+bit output_status = 0; 
+
+// 配置P3.3引脚为推挽输出模式（根据实际硬件连接需求调整）
+void port_init(void)
+{
+    P3M1 &= ~(1 << 3);
+    P3M0 |= (1 << 3);
+}
+
+// 定时器0初始化函数，基于24MHz晶振频率设置初值实现大概1ms的定时中断（可根据实际晶振频率调整）
+void timer0_init(void)
+{
+    AUXR &= 0x7F;  
+    TMOD &= 0xF0;
+    TMOD |= 0x01;  
+    TL0 = 0x66;    
+    TH0 = 0xFC;
+    TF0 = 0;
+    TR0 = 1;      
+    ET0 = 1;      
+    EA = 1;       
+}
+
+// 函数用于将毫秒数转换为分钟数（取整），通过不断减法实现，避免乘法
+unsigned int milliseconds_to_minutes(unsigned long milliseconds) {
+    unsigned int minutes = 0;
+    while (milliseconds >= 60000) {
+        milliseconds -= 60000;
+        minutes++;
+    }
+    return minutes;
+}
+
+// 定时器0中断服务函数，根据时间判断切换输出引脚的状态
+void timer0_isr() interrupt 1
+{
+    TL0 = 0x66;
+    TH0 = 0xFC;
+
+    current_time++;
+
+    if (output_status == 1 && current_time >= on_duration) {
+        // 当前为开状态且达到开的时长，切换为关状态
+        OUTPUT_PIN = 1;
+        output_status = 0;
+        current_time = 0;
+    } else if (output_status == 0 && current_time >= off_duration) {
+        // 当前为关状态且达到关的时长，切换为开状态
+        OUTPUT_PIN = 0;
+        output_status = 1;
+        current_time = 0;
+    }
+}
+
+void main()
+{
+    port_init();    // 初始化端口，设置P3.3为推挽模式
+    timer0_init();  // 初始化定时器0
+    OUTPUT_PIN = 1;  // 初始设为关状态（根据实际硬件初始状态需求调整）
+
+    // 输出初始设置的开和关时长对应的分钟数，方便查看
+    unsigned int on_minutes = milliseconds_to_minutes(on_duration);
+    unsigned int off_minutes = milliseconds_to_minutes(off_duration);
+    // 可通过串口等方式输出查看，这里简单用注释展示示例信息
+    // 例如通过串口打印：printf("开的时长设置为：%u分钟，关的时长设置为：%u分钟\n", on_minutes, off_minutes);
+    // 这里暂不实际进行串口输出，仅示意可以这样查看
+
+    while (1)
+    {
+        // 主循环可以添加其他代码，这里暂为空循环，输出状态切换主要由定时器中断控制
+    }
+}
