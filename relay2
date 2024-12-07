@@ -28,14 +28,13 @@ void port_init(void)
 // 定时器0初始化函数，基于24MHz晶振频率设置初值实现大概1ms的定时中断（可根据实际晶振频率调整）
 void timer0_init(void)
 {
-    AUXR &= 0x7F;  
-    TMOD &= 0xF0;
-    TMOD |= 0x01;  
-    TL0 = 0x66;    
-    TH0 = 0xFC;
-    TF0 = 0;
-    TR0 = 1;      
-    ET0 = 1;      
+	AUXR |= 0x80;			//定时器时钟1T模式
+	TMOD &= 0xF0;			//设置定时器模式
+	TL0 = 0x40;				//设置定时初始值
+	TH0 = 0xA2;				//设置定时初始值
+	TF0 = 0;				//清除TF0标志
+	TR0 = 1;				//定时器0开始计时
+	ET0 = 1;				//使能定时器0中断   
     EA = 1;       
 }
 
