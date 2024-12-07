@@ -9,9 +9,9 @@ volatile unsigned long interrupt_count = 0;
 // 可自行更改的闪烁时间间隔（单位：秒），初始化为300秒，修改此值可改变LED闪烁频率
 #define BLINK_TIME_SECONDS 300  
 // 根据10毫秒的定时基准，将秒换算为对应的毫秒数（用于计算中断次数）
-#define MILLISECONDS_PER_SECOND 1000  
+#define MILLISECONDS_PER_SECOND 100  
 // 根据设定的秒数时间间隔换算出对应的定时器中断次数
-#define INTERRUPT_COUNT_BLINK_TIME (BLINK_TIME_SECONDS * MILLISECONDS_PER_SECOND / 10)
+#define INTERRUPT_COUNT_BLINK_TIME (BLINK_TIME_SECONDS * MILLISECONDS_PER_SECOND)
 
 // 定时器初始化函数，配置定时器0使其能以10毫秒为基准定时，基于24.000MHz系统时钟频率
 void Timer0_Init(void)        //10毫秒@24.000MHz
