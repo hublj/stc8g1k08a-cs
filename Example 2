@@ -1,8 +1,5 @@
 #include <stc8g.h>
 
-// 假设要执行的特定函数声明
-void Do_Something();
-
 // 定义P3.3为输出引脚（可根据实际情况是否用于指示定时状态等）
 sbit LED = P3 ^ 3;
 
@@ -32,7 +29,6 @@ void Timer0_ISR() interrupt 1 {
     overflow_count++;  // 溢出计数加1
     if (overflow_count >= MINUTE_OVERFLOW_TIMES) {  // 判断是否达到1分钟对应的溢出次数
         overflow_count = 0;  // 重置溢出计数
-        Do_Something();  // 调用特定函数
         LED =!LED;  // 可用于指示定时到了（比如闪烁一下LED等，根据实际需求）
     }
 }
@@ -41,11 +37,6 @@ void Port_Init() {
     P3M1 = 0x00;  // 设置P3口为推挽输出
     P3M0 = 0xFF;  // 设置P3口为强推挽输出
     LED = 0;      // 初始化LED为低电平
-}
-
-// 定义要执行的特定函数，这里简单示例为打印一句话，实际可替换为具体功能操作
-void Do_Something() {
-    printf("1 minute has passed and this function is executed.\n");
 }
 
 void main() {
