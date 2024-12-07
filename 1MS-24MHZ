@@ -4,7 +4,7 @@
 sbit LED = P3^3;
 
 // 定义定时器溢出次数，24MHz时钟下，定时器初始值和溢出次数计算
-#define TIMER_OVERFLOW_TIMES  30000  // 10ms溢出一次，5分钟
+#define TIMER_OVERFLOW_TIMES  300000  // 1ms溢出一次，5分钟
 
 volatile unsigned long overflow_count = 0;  // 溢出计数，使用unsigned long以避免溢出
 
