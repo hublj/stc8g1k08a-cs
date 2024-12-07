@@ -23,6 +23,7 @@ void Timer0_Init(void)		//10毫秒@11.0592MHz
 	TF0 = 0;				//清除TF0标志
 	TR0 = 1;				//定时器0开始计时
 	ET0 = 1;				//使能定时器0中断
+        EA = 1;                 // 清除TF0标志，避免初始化后立即误触发中断
 }
 
 void Timer0_Isr(void) interrupt 1
