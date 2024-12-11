@@ -1,5 +1,7 @@
 #include <STC8G.h>
 
+//11.0592MHZ烧录，20MS检测，快速检测
+
 // 延时函数
 void delay(unsigned int ms) {
     unsigned int i, j;
