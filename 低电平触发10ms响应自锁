@@ -1,5 +1,7 @@
 #include <STC8G.h>
 
+//11.0592MHZ烧录，10MS检测，过快无反应，最后开关停留在，最后检测的电平状态
+
 // 延时函数
 void delay(unsigned int ms) {
     unsigned int i, j;
