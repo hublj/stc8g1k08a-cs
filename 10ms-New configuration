@@ -1,0 +1,83 @@
+#include <STC8G.h>
+
+//11.0592MHZ烧录，10MS检测
+
+//这个代码和其它不同之处是一经烧录测试有个别芯片不能正常工作的情况发生，改为下面的其它强推挽输出模式，解决输出电流能力不足问题
+
+//输入IO口没有相应配置模式，下面没有配置输入脚，为空，输入脚要加电阻20欧，否则输入脚电压（检测输入脚）超过芯片电压，会有烧毁的风险
+
+//经测试输入脚串联电阻可用20欧
+
+// 延时函数
+void delay(unsigned int ms) {
+    unsigned int i, j;
+    for (i = 0; i < ms; i++) {
+        for (j = 0; j < 123; j++); // 调整此值以改变延时时间
+    }
+}
+
+// 初始化GPIO
+void GPIO_Init(void) {
+   // 设置P5.4为输入模式，启用内部4kΩ上拉电阻
+	
+    P5M0 &= ~0x10;  // P5.4设置为标准双向口模式，对应二进制第4位设置为0（11110111）
+    P5M1 &= ~0x10;
+
+    // 设置P3.3为输出模式
+    P3M0 |= 0x08;  // P3.3设置为强推挽输出模式，对应二进制第3位设置为1（00001000）
+    P3M1 &= ~0x08;
+    P33 = 0; // 默认设置P3.3为低电平，继电器关闭
+}
+
+// 控制继电器开
+void Relay_On(void) {
+    P33 = 1; // 设置P3.3为高电平，继电器开启
+}
+
+// 控制继电器关
+void Relay_Off(void) {
+    P33 = 0; // 设置P3.3为低电平，继电器关闭
+}
+
+// 继电器状态标志
+bit relay_state = 0; // 继电器状态标志，0表示关闭，1表示开启
+
+// 检查光电开关状态并控制继电器
+void Check_Sensor(void) {
+    static bit last_sensor_state = 1; // 上一次的传感器状态，默认为未触发
+    bit current_sensor_state;          // 当前传感器状态
+
+    // 获取当前传感器状态
+    current_sensor_state = (P5 & (1 << 4)) ? 1 : 0;
+
+    // 如果传感器状态发生变化，则进行消抖处理
+    if (current_sensor_state != last_sensor_state) {
+        delay(10); // 延时10ms以消除抖动
+
+        // 再次获取当前传感器状态，确保状态变化是真实的
+        current_sensor_state = (P5 & (1 << 4)) ? 1 : 0;
+
+        // 如果状态确实变化了，则根据继电器状态决定操作
+        if (current_sensor_state != last_sensor_state) {
+            if (current_sensor_state == 0 && !relay_state) { // 光电开关被遮挡且继电器关闭
+                Relay_On();         // 开启继电器
+                relay_state = 1;    // 更新继电器状态
+            } else if (current_sensor_state == 0 && relay_state) { // 光电开关被遮挡且继电器开启
+                Relay_Off();        // 关闭继电器
+                relay_state = 0;    // 更新继电器状态
+            }
+
+            // 更新上次传感器状态
+            last_sensor_state = current_sensor_state;
+        }
+    }
+}
+
+// 主函数
+void main(void) {
+    GPIO_Init(); // 初始化GPIO
+    
+    while (1) {
+        Check_Sensor(); // 检查光电开关状态
+    }
+}
